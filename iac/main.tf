@@ -61,5 +61,7 @@ module "sql" {
 }
 
 module "services" {
-  source = "./services"
+  source  = "./services"
+  region  = var.region
+  project = var.project
 }

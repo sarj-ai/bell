@@ -1,0 +1,1 @@
+- In the iac folder modify services/main.tf to add a free-switch / kamilio voip setup. Keep it simple. Use a VM for each service.
