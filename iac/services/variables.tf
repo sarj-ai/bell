@@ -13,3 +13,7 @@ variable "project" {
   type        = string
 }
 
+
+variable "pg_uri" {}
+variable "pg_socket_uri" {}
+variable "bucket_name" {}
