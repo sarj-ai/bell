@@ -16,4 +16,3 @@ variable "project" {
 
 variable "pg_uri" {}
 variable "pg_socket_uri" {}
-variable "bucket_name" {}

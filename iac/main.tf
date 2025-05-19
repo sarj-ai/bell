@@ -52,14 +52,6 @@ resource "null_resource" "ensure_services_enabled" {
   }
 }
 
-module "blob" {
-  source  = "./blob"
-  project = var.project
-  region  = var.region
-
-
-}
-
 module "sql" {
   source            = "./sql"
   project           = var.project
@@ -74,5 +66,4 @@ module "services" {
   project       = var.project
   pg_socket_uri = module.sql.pg_socket_uri
   pg_uri        = module.sql.pg_uri
-  bucket_name   = module.blob.bucket_name
 }

@@ -12,8 +12,8 @@ resource "google_compute_subnetwork" "voip_subnet" {
   network       = google_compute_network.voip_network.id
 }
 
-resource "google_compute_address" "freeswitch_static_ip" {
-  name    = "freeswitch-static-ip"
+resource "google_compute_address" "asterisk_static_ip" {
+  name    = "asterisk-static-ip"
   project = var.project
   region  = var.region
 }
@@ -81,8 +81,8 @@ resource "google_compute_firewall" "web_firewall" {
   source_ranges = ["0.0.0.0/0"]
 }
 
-resource "google_compute_instance" "freeswitch" {
-  name         = "freeswitch"
+resource "google_compute_instance" "asterisk" {
+  name         = "asterisk"
   machine_type = "e2-micro"
   zone         = "${var.region}-a"
   project      = var.project
@@ -98,7 +98,7 @@ resource "google_compute_instance" "freeswitch" {
     network    = google_compute_network.voip_network.id
     subnetwork = google_compute_subnetwork.voip_subnet.id
     access_config {
-      nat_ip = google_compute_address.freeswitch_static_ip.address
+      nat_ip = google_compute_address.asterisk_static_ip.address
     }
   }
 
@@ -116,40 +116,13 @@ resource "google_compute_instance" "freeswitch" {
     curl https://packages.cloud.google.com/apt/doc/apt-key.gpg | apt-key --keyring /usr/share/keyrings/cloud.google.gpg add -
     apt-get update
     apt-get install -y google-cloud-cli
-
-    # Install FreeSWITCH
-    wget -O - https://files.freeswitch.org/repo/deb/debian-release/fsstretch-archive-keyring.asc | apt-key add -
-    echo "deb http://files.freeswitch.org/repo/deb/debian-release/ bookworm main" > /etc/apt/sources.list.d/freeswitch.list
-    apt-get update
-    apt-get install -y freeswitch freeswitch-meta-all
-
-    # Configure FreeSWITCH to use Cloud Storage
-    cat > /etc/freeswitch/autoload_configs/cloud_storage.conf.xml <<'FSEOF'
-    <configuration name="cloud_storage.conf" description="Cloud Storage Configuration">
-      <settings>
-        <param name="bucket-name" value="${var.bucket_name}"/>
-        <param name="recordings-path" value="recordings"/>
-        <param name="voicemail-path" value="voicemail"/>
-      </settings>
-    </configuration>
-    FSEOF
-
-    # Set up Cloud SQL environment for FreeSWITCH
-    cat > /etc/systemd/system/freeswitch.service.d/override.conf <<'SERVICEEOF'
-    [Service]
-    Environment="PG_SOCKET_URI=${var.pg_socket_uri}"
-    Environment="DB_NAME=${var.project}"
-    SERVICEEOF
-
-    systemctl daemon-reload
-    systemctl restart freeswitch
   EOF
 
   service_account {
     scopes = ["cloud-platform"]
   }
 
-  tags = ["voip", "freeswitch"]
+  tags = ["voip", "asterisk"]
 }
 
 # Kamailio VM
@@ -188,27 +161,6 @@ resource "google_compute_instance" "kamailio" {
     curl https://packages.cloud.google.com/apt/doc/apt-key.gpg | apt-key --keyring /usr/share/keyrings/cloud.google.gpg add -
     apt-get update
     apt-get install -y google-cloud-cli
-
-    # Install Kamailio
-    wget -O- https://deb.kamailio.org/kamailiodebkey.gpg | apt-key add -
-    echo "deb http://deb.kamailio.org/kamailio56 bookworm main" > /etc/apt/sources.list.d/kamailio.list
-    apt-get update
-    apt-get install -y kamailio kamailio-postgres-modules kamailio-tls-modules kamailio-websocket-modules
-
-    # Configure Kamailio environment variables for database connection
-    mkdir -p /etc/systemd/system/kamailio.service.d/
-    cat > /etc/systemd/system/kamailio.service.d/override.conf <<'SERVICEEOF'
-    [Service]
-    Environment="PG_SOCKET_URI=${var.pg_socket_uri}"
-    Environment="DB_NAME=${var.project}"
-    SERVICEEOF
-
-    # Update kamailio.cfg to use environment variables for DB connection
-    sed -i 's/#!define WITH_MYSQL/#!define WITH_POSTGRES/' /etc/kamailio/kamailio.cfg
-    sed -i 's/#!substdef "!DBURL!mysql:\/\/kamailio:kamailiorw@localhost\/kamailio!g"/#!substdef "!DBURL!postgres:\/\/$DB_USER@$PG_SOCKET_URI\/$DB_NAME!g"/' /etc/kamailio/kamailio.cfg
-
-    systemctl daemon-reload
-    systemctl restart kamailio
   EOF
 
   service_account {
@@ -233,7 +185,7 @@ resource "google_compute_firewall" "internal_voip_firewall" {
     ports    = ["4060"]
   }
 
-  source_tags = ["voip", "freeswitch", "kamailio"]
-  target_tags = ["voip", "freeswitch", "kamailio"]
+  source_tags = ["voip", "asterisk", "kamailio"]
+  target_tags = ["voip", "asterisk", "kamailio"]
 }
 

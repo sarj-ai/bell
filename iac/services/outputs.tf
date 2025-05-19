@@ -1,6 +1,6 @@
-output "freeswitch_ip" {
-  description = "The public IP address of the FreeSWITCH VM"
-  value       = google_compute_address.freeswitch_static_ip.address
+output "asterisk_ip" {
+  description = "The public IP address of the asterisk VM"
+  value       = google_compute_address.asterisk_static_ip.address
 }
 
 output "kamailio_ip" {
